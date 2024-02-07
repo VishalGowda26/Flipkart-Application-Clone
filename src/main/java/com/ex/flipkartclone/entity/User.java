@@ -31,6 +31,6 @@ public class User {
 	private String email;
 	private String password;
 	private UserRole userrole;
-	boolean isEmailVerified;
-	boolean isDeleted;
+	private boolean isEmailVerified;
+	private boolean isDeleted;
 }
