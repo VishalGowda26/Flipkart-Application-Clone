@@ -1,4 +1,4 @@
-package com.ex.flipkartclone.requestdto;
+package com.ex.flipkartclone.request_dto;
 
 import com.ex.flipkartclone.enums.UserRole;
 
