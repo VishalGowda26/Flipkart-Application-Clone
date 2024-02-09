@@ -7,7 +7,6 @@ import lombok.Setter;
 
 @SuppressWarnings("serial")
 @AllArgsConstructor
-@NoArgsConstructor
 @Getter
 @Setter
 public class UserNotFoundException extends RuntimeException {

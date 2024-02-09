@@ -1,37 +1,52 @@
 package com.ex.flipkartclone.serviceimpl;
 
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.Random;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.ex.flipkartclone.cache.CacheStore;
+import com.ex.flipkartclone.entity.AccessToken;
 import com.ex.flipkartclone.entity.Customer;
+import com.ex.flipkartclone.entity.RefreshToken;
 import com.ex.flipkartclone.entity.Seller;
 import com.ex.flipkartclone.entity.User;
 import com.ex.flipkartclone.exception.ConstraintViolationException;
+import com.ex.flipkartclone.exception.UserNotFoundException;
+import com.ex.flipkartclone.repo.AccessTokenRepo;
 import com.ex.flipkartclone.repo.CustomerRepo;
+import com.ex.flipkartclone.repo.RefreshTokenRepo;
 import com.ex.flipkartclone.repo.SellerRepo;
 import com.ex.flipkartclone.repo.UserRepo;
+import com.ex.flipkartclone.request_dto.AuthRequest;
 import com.ex.flipkartclone.request_dto.OtpModel;
 import com.ex.flipkartclone.request_dto.UserRequest;
+import com.ex.flipkartclone.response_dto.AuthResponse;
 import com.ex.flipkartclone.response_dto.UserResponse;
+import com.ex.flipkartclone.security.JwtService;
 import com.ex.flipkartclone.service.AuthService;
+import com.ex.flipkartclone.util.CookieManager;
 import com.ex.flipkartclone.util.MessageStructure;
 import com.ex.flipkartclone.util.ResponseStructure;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
-import lombok.AllArgsConstructor;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 
 @Service
-@AllArgsConstructor
 @Slf4j
 public class AuthServiceImpl implements AuthService {
 
@@ -43,7 +58,45 @@ public class AuthServiceImpl implements AuthService {
 	private CacheStore<User> userCacheStore;
 	private ResponseStructure<User> userStructure;
 	private JavaMailSender javaMailSender;
+	private PasswordEncoder passwordEncoder;
+	private AuthenticationManager authenticationManager;
+	private ResponseStructure<AuthResponse> authStructure;
+	private CookieManager cookieManager;
+	private JwtService jwtService;
+	private AccessTokenRepo accessTokenRepo;
+	private RefreshTokenRepo refreshTokenRepo;
+	@Value("${myapp.access.expiry}")
+	private int accessExpiryInSeconds;
+	@Value("${myapp.refresh.expiry}")
+	private int refreshExpiryInSeconds;
 
+	public AuthServiceImpl(UserRepo userRepo, SellerRepo sellerRepo, CustomerRepo customerRepo,
+			ResponseStructure<UserResponse> structure, CacheStore<String> otpCacheStore,
+			CacheStore<User> userCacheStore, ResponseStructure<User> userStructure, JavaMailSender javaMailSender,
+			PasswordEncoder passwordEncoder, AuthenticationManager authenticationManager,
+			ResponseStructure<AuthResponse> authStructure, CookieManager cookieManager, JwtService jwtService,
+			AccessTokenRepo accessTokenRepo, RefreshTokenRepo refreshTokenRepo) {
+		super();
+		this.userRepo = userRepo;
+		this.sellerRepo = sellerRepo;
+		this.customerRepo = customerRepo;
+		this.structure = structure;
+		this.otpCacheStore = otpCacheStore;
+		this.userCacheStore = userCacheStore;
+		this.userStructure = userStructure;
+		this.javaMailSender = javaMailSender;
+		this.passwordEncoder = passwordEncoder;
+		this.authenticationManager = authenticationManager;
+		this.authStructure = authStructure;
+		this.cookieManager = cookieManager;
+		this.jwtService = jwtService;
+		this.accessTokenRepo = accessTokenRepo;
+		this.refreshTokenRepo = refreshTokenRepo;
+		this.accessExpiryInSeconds = accessExpiryInSeconds;
+		this.refreshExpiryInSeconds = refreshExpiryInSeconds;
+	}
+
+	
 	/*------------------------------> Map To UserRequest <--------------------------------------------*/
 
 	public <T extends User> T mapToUser(UserRequest userRequest) {
@@ -58,7 +111,7 @@ public class AuthServiceImpl implements AuthService {
 		default -> throw new ConstraintViolationException(null, 0, null);
 		}
 		user.setUsername(userRequest.getEmail().split("@")[0]);
-		user.setPassword(userRequest.getPassword());
+		user.setPassword(passwordEncoder.encode(userRequest.getPassword()));
 		user.setEmail(userRequest.getEmail());
 		user.setUserrole(userRequest.getUserrole());
 		user.setDeleted(false);
@@ -138,6 +191,57 @@ public class AuthServiceImpl implements AuthService {
 				HttpStatus.CREATED);
 	}
 
+	@Override
+	public ResponseEntity<ResponseStructure<AuthResponse>> login(AuthRequest authRequest,HttpServletResponse servletResponse) {
+		String username = authRequest.getEmail().split("@")[0];
+		UsernamePasswordAuthenticationToken token = new UsernamePasswordAuthenticationToken(username,authRequest.getPassword());
+		Authentication authentication = authenticationManager.authenticate(token);
+		if (!authentication.isAuthenticated())
+			throw new UserNotFoundException("Failed to Authenticate the user", HttpStatus.CONFLICT.value(),
+					"User details not found");
+		else {
+			// generating the cookies and authResponse & returning to client
+			return userRepo.findByUsername(username).map(user->{
+				grantAccess(servletResponse, user);
+				return ResponseEntity.ok(authStructure.setStatus(HttpStatus.OK.value())
+						.setMessage("Login Successful")
+						.setData(AuthResponse.builder()
+								.userId(user.getUserId())
+								.username(username)
+								.role(user.getUserrole().name())
+								.isAuthenticated(true)
+								.accessExpiration(LocalDateTime.now().plusSeconds(accessExpiryInSeconds))
+								.refreshExpiration(LocalDateTime.now().plusSeconds(refreshExpiryInSeconds))
+								.build()));
+			}).get();
+		}
+
+	}
+
+	private void grantAccess(HttpServletResponse response, User user) {
+		//generating access & refresh tokens
+		String accessToken = jwtService.generateAccessToken(user.getUsername());
+		String refreshToken = jwtService.generateRefreshToken(user.getUsername());
+		
+		//adding access & refresh token cookies to response
+		Cookie atCookie = cookieManager.configureCookie(new Cookie("at",accessToken), accessExpiryInSeconds);
+		response.addCookie(atCookie);
+		Cookie rtCookie = cookieManager.configureCookie(new Cookie("rt", refreshToken), refreshExpiryInSeconds);
+		response.addCookie(rtCookie);
+		
+		//saving the access & refresh cookie into database
+		accessTokenRepo.save(AccessToken.builder()
+				.token(accessToken)
+				.isBlocked(false)
+				.expiration(LocalDateTime.now().plusSeconds(accessExpiryInSeconds))
+				.build());
+		refreshTokenRepo.save(RefreshToken.builder()
+				.token(refreshToken)
+				.expiration(LocalDateTime.now().plusSeconds(refreshExpiryInSeconds))
+				.isBlocked(false)
+				.build());
+	}
+
 	/*---------------------------------------> Generate OTP <--------------------------------------------*/
 
 	private String generateOTP() {
@@ -168,7 +272,7 @@ public class AuthServiceImpl implements AuthService {
 				.build());
 	}
 
-	/*-------------------------------------> ToSend login Confirmation <-------------------------------------*/
+	/*----------------------------------> ToSend login Confirmation <-----------------------------------*/
 	public void sendRegistrationMail(User user) throws MessagingException {
 		sendMail(MessageStructure.builder().to(user.getEmail()).subject("Complete your Registration To Flipkart")
 				.sentDate(new Date()).text("Welcome, " + user.getUsername() + " to Flipkart "
