@@ -5,12 +5,11 @@ import lombok.Getter;
 import lombok.Setter;
 
 @SuppressWarnings("serial")
-@AllArgsConstructor
 @Getter
 @Setter
-public class UserNotFoundException extends RuntimeException {
+@AllArgsConstructor
+public class UserNotLoggedInException extends RuntimeException {
 	private String message;
 	private int status;
 	private String rootcause;
-
 }
