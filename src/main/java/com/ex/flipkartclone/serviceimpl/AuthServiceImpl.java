@@ -2,6 +2,7 @@ package com.ex.flipkartclone.serviceimpl;
 
 import java.time.LocalDateTime;
 import java.util.Date;
+import java.util.List;
 import java.util.Random;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -278,6 +279,20 @@ public class AuthServiceImpl implements AuthService {
 				.build());
 	}
 
+	public void blockAccessTokens(List<AccessToken> accessTokens) {
+		accessTokens.forEach(at -> {
+			at.setBlocked(true);
+			accessTokenRepo.save(at);
+		});
+	}
+
+	public void blockRefreshTokens(List<RefreshToken> refeshToken) {
+		refeshToken.forEach(rt -> {
+			rt.setBlocked(true);
+			refreshTokenRepo.save(rt);
+		});
+	}
+
 	/*-------------------------------------------> User Logout <---------------------------------------------*/
 
 	@Override
@@ -326,20 +341,40 @@ public class AuthServiceImpl implements AuthService {
 //	}
 
 	/*---------------------------------> Revoke All Device Access <--------------------------------*/
-	public ResponseEntity<ResponseStructure<SimpleResponseStructure>> revokeAll() {
+	@Override
+	public ResponseEntity<ResponseStructure<SimpleResponseStructure>> revokeAllDeviceAccess(String accessToken,
+			String refreshToken) {
 		String username = SecurityContextHolder.getContext().getAuthentication().getName();
 		userRepo.findByUsername(username).ifPresent(user -> {
-			accessTokenRepo.findByUserAndIsBlocked(user, false).ifPresent(accessToken -> {
-				accessToken.setBlocked(true);
-				accessTokenRepo.save(accessToken);
+			System.out.println("user");
+			accessTokenRepo.findByUserAndIsBlocked(user, false).ifPresent(access -> {
+				System.out.println("acc");
+				access.setBlocked(true);
+				accessTokenRepo.save(access);
 			});
-			refreshTokenRepo.findByUser(user).ifPresent(refreshToken -> {
-				refreshToken.setBlocked(true);
-				refreshTokenRepo.save(refreshToken);
+			refreshTokenRepo.findByUserAndIsBlocked(user, false).ifPresent(refresh -> {
+				System.out.println("rcc");
+				refresh.setBlocked(true);
+				refreshTokenRepo.save(refresh);
 			});
 		});
 		return new ResponseEntity<ResponseStructure<SimpleResponseStructure>>(simpleStructure
 				.setStatus(HttpStatus.OK.value()).setMessage("All access revoked and logged out from all devices"),
 				HttpStatus.OK);
 	}
+
+	/*---------------------------------> Revoke Other Device Access <--------------------------------*/
+	@Override
+	public ResponseEntity<ResponseStructure<SimpleResponseStructure>> revokeOtherDeviceAccess(String accessToken,
+			String refreshToken) {
+		String username = SecurityContextHolder.getContext().getAuthentication().getName();
+		userRepo.findByUsername(username).ifPresent(user -> {
+			blockAccessTokens(accessTokenRepo.findByUserAndIsBlockedAndTokenNot(user, false, accessToken));
+			blockRefreshTokens(refreshTokenRepo.findByUserAndIsBlockedAndTokenNot(user, false, refreshToken));
+		});
+		return new ResponseEntity<ResponseStructure<SimpleResponseStructure>>(simpleStructure
+				.setMessage("All other devices logged out successfully").setStatus(HttpStatus.OK.value()),
+				HttpStatus.OK);
+	}
+
 }
