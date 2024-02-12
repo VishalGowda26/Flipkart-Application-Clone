@@ -22,6 +22,7 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.AllArgsConstructor;
+import lombok.extern.java.Log;
 import lombok.extern.slf4j.Slf4j;
 
 @Component
@@ -39,6 +40,7 @@ public class JwtFilter extends OncePerRequestFilter {
 		String at = null;
 		String rt = null;
 		Cookie[] cookies = request.getCookies();
+		log.info("In Jwt filter");
 		if (cookies != null) {
 			for (Cookie cookie : cookies) {
 				if (cookie.getName().equals("at"))
@@ -46,6 +48,7 @@ public class JwtFilter extends OncePerRequestFilter {
 				if (cookie.getName().equals("rt"))
 					rt = cookie.getValue();
 			}
+			log.info("Trying Authenticating the token.....");
 			String username = null;
 			if (at != null && rt != null) {
 				Optional<AccessToken> accesstoken = accessTokenRepo.findByTokenAndIsBlocked(at, false);
@@ -65,9 +68,10 @@ public class JwtFilter extends OncePerRequestFilter {
 					SecurityContextHolder.getContext().setAuthentication(authenticationToken);
 					log.info("Authenticated Succesfully");
 				}
-				filterChain.doFilter(request, response);
+				
 			}
 		}
+		filterChain.doFilter(request, response);
 	}
 
 }

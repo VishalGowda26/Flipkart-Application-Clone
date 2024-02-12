@@ -18,6 +18,6 @@ public interface AccessTokenRepo extends JpaRepository<AccessToken, Long> {
 
 	Optional<AccessToken> findByUserAndIsBlocked(User user, boolean blocked);
 
-	Optional<AccessToken> findByUserAndIsBlockedNotIn(User user, AccessToken accessToken);
-
+	List<AccessToken> findByUserAndIsBlockedAndTokenNot(User user,boolean blocked, String accessToken);
+	
 }

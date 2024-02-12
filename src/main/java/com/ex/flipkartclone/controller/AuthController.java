@@ -60,6 +60,21 @@ public class AuthController {
 		return authService.logout(servletResponse, accessToken, refeshToken);
 	}
 
+	@PreAuthorize(value = "hasAuthority('SELLER') or hasAuthority('CUSTOMER')")
+	@PostMapping("/revoke-all")
+	public ResponseEntity<ResponseStructure<SimpleResponseStructure>> revokeAllDeviceAccess(
+			@CookieValue(name = "rt", required = false) String refreshToken,
+			@CookieValue(name = "at", required = false) String accessToken) {
+		return authService.revokeAllDeviceAccess(accessToken, refreshToken);
+	}
+	
+	@PreAuthorize(value = "hasAuthority('SELLER') or hasAuthority('CUSTOMER')")
+	@PostMapping("/revoke-other")
+	public ResponseEntity<ResponseStructure<SimpleResponseStructure>> revokeOtherDeviceAccess(
+			@CookieValue(name = "rt", required = false) String refreshToken,
+			@CookieValue(name = "at", required = false) String accessToken) {
+		return authService.revokeOtherDeviceAccess(accessToken, refreshToken);
+	}
 
 
 }
