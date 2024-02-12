@@ -18,9 +18,13 @@ public interface AuthService {
 
 	public ResponseEntity<ResponseStructure<User>> verifyOTP(OtpModel otpModel);
 
-	public ResponseEntity<ResponseStructure<AuthResponse>> login(AuthRequest authRequest, HttpServletResponse servletResponse);
+	public ResponseEntity<ResponseStructure<AuthResponse>> login(AuthRequest authRequest,
+			HttpServletResponse servletResponse);
 
-	public ResponseEntity<ResponseStructure<SimpleResponseStructure>> logout(HttpServletResponse servletResponse, String accessToken, String refeshToken);
+	public ResponseEntity<ResponseStructure<SimpleResponseStructure>> logout(HttpServletResponse servletResponse,
+			String accessToken, String refeshToken);
+
+	public ResponseEntity<ResponseStructure<SimpleResponseStructure>> revokeAll();
 
 //	public ResponseEntity<ResponseStructure<String>> logout(HttpServletRequest servletRequest,
 //			HttpServletResponse servletResponse);

@@ -13,6 +13,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -277,6 +278,8 @@ public class AuthServiceImpl implements AuthService {
 				.build());
 	}
 
+	/*-------------------------------------------> User Logout <---------------------------------------------*/
+
 	@Override
 	public ResponseEntity<ResponseStructure<SimpleResponseStructure>> logout(HttpServletResponse servletResponse,
 			String accessToken, String refeshToken) {
@@ -292,6 +295,8 @@ public class AuthServiceImpl implements AuthService {
 		return new ResponseEntity<ResponseStructure<SimpleResponseStructure>>(
 				simpleStructure.setMessage("Logout Successful").setStatus(HttpStatus.GONE.value()), HttpStatus.GONE);
 	}
+
+	/*-------------------------------------------> User Logout <---------------------------------------------*/
 
 //	@Override
 //	public ResponseEntity<ResponseStructure<String>> logout(HttpServletRequest servletRequest,
@@ -320,4 +325,21 @@ public class AuthServiceImpl implements AuthService {
 //				.setData("Wish to See you Again"),HttpStatus.GONE);
 //	}
 
+	/*---------------------------------> Revoke All Device Access <--------------------------------*/
+	public ResponseEntity<ResponseStructure<SimpleResponseStructure>> revokeAll() {
+		String username = SecurityContextHolder.getContext().getAuthentication().getName();
+		userRepo.findByUsername(username).ifPresent(user -> {
+			accessTokenRepo.findByUserAndIsBlocked(user, false).ifPresent(accessToken -> {
+				accessToken.setBlocked(true);
+				accessTokenRepo.save(accessToken);
+			});
+			refreshTokenRepo.findByUser(user).ifPresent(refreshToken -> {
+				refreshToken.setBlocked(true);
+				refreshTokenRepo.save(refreshToken);
+			});
+		});
+		return new ResponseEntity<ResponseStructure<SimpleResponseStructure>>(simpleStructure
+				.setStatus(HttpStatus.OK.value()).setMessage("All access revoked and logged out from all devices"),
+				HttpStatus.OK);
+	}
 }
