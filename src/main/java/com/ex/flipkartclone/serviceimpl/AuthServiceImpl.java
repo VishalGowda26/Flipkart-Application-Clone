@@ -307,6 +307,8 @@ public class AuthServiceImpl implements AuthService {
 		RefreshToken rt = refreshTokenRepo.findByToken(refeshToken);
 		rt.setBlocked(true);
 		refreshTokenRepo.save(rt);
+		servletResponse.addCookie(cookieManager.invalidate(new Cookie("at","")));
+		servletResponse.addCookie(cookieManager.invalidate(new Cookie("rt","")));
 		return new ResponseEntity<ResponseStructure<SimpleResponseStructure>>(
 				simpleStructure.setMessage("Logout Successful").setStatus(HttpStatus.GONE.value()), HttpStatus.GONE);
 	}
