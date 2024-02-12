@@ -1,6 +1,7 @@
 package com.ex.flipkartclone.controller;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -51,12 +52,14 @@ public class AuthController {
 //		
 //	}
 
+	@PreAuthorize(value = "hasAuthority('SELLER') or hasAuthority('CUSTOMER')")
 	@PostMapping("/logout")
 	public ResponseEntity<ResponseStructure<SimpleResponseStructure>> logout(HttpServletResponse servletResponse,
 			@CookieValue(name = "at", required = false) String accessToken,
 			@CookieValue(name = "rt", required = false) String refeshToken) {
 		return authService.logout(servletResponse, accessToken, refeshToken);
-
 	}
+
+
 
 }
