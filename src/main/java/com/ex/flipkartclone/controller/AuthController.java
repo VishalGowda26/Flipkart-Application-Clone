@@ -1,6 +1,7 @@
 package com.ex.flipkartclone.controller;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -11,13 +12,13 @@ import com.ex.flipkartclone.request_dto.AuthRequest;
 import com.ex.flipkartclone.request_dto.OtpModel;
 import com.ex.flipkartclone.request_dto.UserRequest;
 import com.ex.flipkartclone.response_dto.AuthResponse;
+import com.ex.flipkartclone.response_dto.SimpleResponseStructure;
 import com.ex.flipkartclone.response_dto.UserResponse;
 import com.ex.flipkartclone.service.AuthService;
 import com.ex.flipkartclone.util.ResponseStructure;
 
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.AllArgsConstructor;
-
 
 @RestController
 @RequestMapping("/api/v1")
@@ -31,15 +32,31 @@ public class AuthController {
 		return authService.register(userrequest);
 
 	}
-	
+
 	@PostMapping(path = "/verify-otp")
-	public ResponseEntity<ResponseStructure<User>> verifyOTP(@RequestBody OtpModel otpModel){
+	public ResponseEntity<ResponseStructure<User>> verifyOTP(@RequestBody OtpModel otpModel) {
 		return authService.verifyOTP(otpModel);
-		
+
 	}
-	
+
 	@PostMapping("/login")
-	public ResponseEntity<ResponseStructure<AuthResponse>> login(@RequestBody AuthRequest authRequest,HttpServletResponse servletResponse){
-		return authService.login(authRequest,servletResponse);
+	public ResponseEntity<ResponseStructure<AuthResponse>> login(@RequestBody AuthRequest authRequest,
+			HttpServletResponse servletResponse) {
+		return authService.login(authRequest, servletResponse);
 	}
+
+//	@PostMapping("/logout")
+//	public ResponseEntity<ResponseStructure<String>> logout(HttpServletRequest servletRequest,HttpServletResponse servletResponse){
+//		return authService.logout(servletRequest,servletResponse);
+//		
+//	}
+
+	@PostMapping("/logout")
+	public ResponseEntity<ResponseStructure<SimpleResponseStructure>> logout(HttpServletResponse servletResponse,
+			@CookieValue(name = "at", required = false) String accessToken,
+			@CookieValue(name = "rt", required = false) String refeshToken) {
+		return authService.logout(servletResponse, accessToken, refeshToken);
+
+	}
+
 }
