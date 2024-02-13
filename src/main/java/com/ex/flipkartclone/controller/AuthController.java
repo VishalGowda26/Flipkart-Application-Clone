@@ -54,7 +54,7 @@ public class AuthController {
 
 	@PreAuthorize(value = "hasAuthority('SELLER') or hasAuthority('CUSTOMER')")
 	@PostMapping("/logout")
-	public ResponseEntity<ResponseStructure<SimpleResponseStructure>> logout(HttpServletResponse servletResponse,
+	public ResponseEntity<SimpleResponseStructure> logout(HttpServletResponse servletResponse,
 			@CookieValue(name = "at", required = false) String accessToken,
 			@CookieValue(name = "rt", required = false) String refeshToken) {
 		return authService.logout(servletResponse, accessToken, refeshToken);
@@ -62,7 +62,7 @@ public class AuthController {
 
 	@PreAuthorize(value = "hasAuthority('SELLER') or hasAuthority('CUSTOMER')")
 	@PostMapping("/revoke-all")
-	public ResponseEntity<ResponseStructure<SimpleResponseStructure>> revokeAllDeviceAccess(
+	public ResponseEntity<SimpleResponseStructure> revokeAllDeviceAccess(
 			@CookieValue(name = "rt", required = false) String refreshToken,
 			@CookieValue(name = "at", required = false) String accessToken) {
 		return authService.revokeAllDeviceAccess(accessToken, refreshToken);
@@ -70,10 +70,18 @@ public class AuthController {
 	
 	@PreAuthorize(value = "hasAuthority('SELLER') or hasAuthority('CUSTOMER')")
 	@PostMapping("/revoke-other")
-	public ResponseEntity<ResponseStructure<SimpleResponseStructure>> revokeOtherDeviceAccess(
+	public ResponseEntity<SimpleResponseStructure> revokeOtherDeviceAccess(
 			@CookieValue(name = "rt", required = false) String refreshToken,
 			@CookieValue(name = "at", required = false) String accessToken) {
 		return authService.revokeOtherDeviceAccess(accessToken, refreshToken);
+	}
+	
+	@PreAuthorize(value = "hasAuthority('SELLER') or hasAuthority('CUSTOMER')")
+	@PostMapping("/refresh-login")
+	public ResponseEntity<SimpleResponseStructure> refreshLogin(HttpServletResponse servletResponse,
+			@CookieValue(name = "rt", required = false) String refreshToken,
+			@CookieValue(name = "at", required = false) String accessToken) {
+		return authService.refreshLogin(servletResponse, accessToken, refreshToken);
 	}
 
 

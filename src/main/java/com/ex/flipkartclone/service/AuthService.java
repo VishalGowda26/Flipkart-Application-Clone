@@ -21,14 +21,17 @@ public interface AuthService {
 	public ResponseEntity<ResponseStructure<AuthResponse>> login(AuthRequest authRequest,
 			HttpServletResponse servletResponse);
 
-	public ResponseEntity<ResponseStructure<SimpleResponseStructure>> logout(HttpServletResponse servletResponse,
+	public ResponseEntity<SimpleResponseStructure> logout(HttpServletResponse servletResponse,
 			String accessToken, String refeshToken);
 
 
-	public ResponseEntity<ResponseStructure<SimpleResponseStructure>> revokeOtherDeviceAccess(String accessToken,
+	public ResponseEntity<SimpleResponseStructure> revokeOtherDeviceAccess(String accessToken,
 			String refreshToken);
 
-	public ResponseEntity<ResponseStructure<SimpleResponseStructure>> revokeAllDeviceAccess(String accessToken,
+	public ResponseEntity<SimpleResponseStructure> revokeAllDeviceAccess(String accessToken,
+			String refreshToken);
+
+	public ResponseEntity<SimpleResponseStructure> refreshLogin(HttpServletResponse servletResponse,String accessToken,
 			String refreshToken);
 
 //	public ResponseEntity<ResponseStructure<String>> logout(HttpServletRequest servletRequest,
