@@ -22,7 +22,6 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.AllArgsConstructor;
-import lombok.extern.java.Log;
 import lombok.extern.slf4j.Slf4j;
 
 @Component
@@ -68,7 +67,7 @@ public class JwtFilter extends OncePerRequestFilter {
 					SecurityContextHolder.getContext().setAuthentication(authenticationToken);
 					log.info("Authenticated Succesfully");
 				}
-				
+
 			}
 		}
 		filterChain.doFilter(request, response);

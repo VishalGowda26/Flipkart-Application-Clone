@@ -66,7 +66,7 @@ public class AuthServiceImpl implements AuthService {
 	private AuthenticationManager authenticationManager;
 	private ResponseStructure<AuthResponse> authStructure;
 	private ResponseStructure<String> stringStructure;
-	private ResponseStructure<SimpleResponseStructure> simpleStructure;
+	private SimpleResponseStructure simpleStructure;
 	private CookieManager cookieManager;
 	private JwtService jwtService;
 	private AccessTokenRepo accessTokenRepo;
@@ -81,8 +81,8 @@ public class AuthServiceImpl implements AuthService {
 			CacheStore<User> userCacheStore, ResponseStructure<User> userStructure, JavaMailSender javaMailSender,
 			PasswordEncoder passwordEncoder, AuthenticationManager authenticationManager,
 			ResponseStructure<AuthResponse> authStructure, ResponseStructure<String> stringStructure,
-			ResponseStructure<SimpleResponseStructure> simpleStructure, CookieManager cookieManager,
-			JwtService jwtService, AccessTokenRepo accessTokenRepo, RefreshTokenRepo refreshTokenRepo) {
+			SimpleResponseStructure simpleStructure, CookieManager cookieManager, JwtService jwtService,
+			AccessTokenRepo accessTokenRepo, RefreshTokenRepo refreshTokenRepo) {
 		super();
 		this.userRepo = userRepo;
 		this.sellerRepo = sellerRepo;
@@ -273,9 +273,9 @@ public class AuthServiceImpl implements AuthService {
 
 	/*----------------------------------> ToSend login Confirmation <-----------------------------------*/
 	public void sendRegistrationMail(User user) throws MessagingException {
-		sendMail(MessageStructure.builder().to(user.getEmail()).subject("Complete your Registration To Flipkart")
-				.sentDate(new Date()).text("Welcome, " + user.getUsername() + " to Flipkart "
-						+ " Your Registration process is complete <br>" + " Continue Shopping on Flipkart <br> ")
+		sendMail(MessageStructure.builder().to(user.getEmail()).subject("Login Successfull").sentDate(new Date())
+				.text("Welcome, " + user.getUsername() + " to Flipkart " + " Your Registration process is complete <br>"
+						+ " Continue Shopping on Flipkart <br> ")
 				.build());
 	}
 
@@ -296,8 +296,8 @@ public class AuthServiceImpl implements AuthService {
 	/*-------------------------------------------> User Logout <---------------------------------------------*/
 
 	@Override
-	public ResponseEntity<ResponseStructure<SimpleResponseStructure>> logout(HttpServletResponse servletResponse,
-			String accessToken, String refeshToken) {
+	public ResponseEntity<SimpleResponseStructure> logout(HttpServletResponse servletResponse, String accessToken,
+			String refeshToken) {
 		if (accessToken == null && refeshToken == null)
 			throw new UserNotLoggedInException("User with given details not found", HttpStatus.BAD_REQUEST.value(),
 					"No such user found");
@@ -307,10 +307,11 @@ public class AuthServiceImpl implements AuthService {
 		RefreshToken rt = refreshTokenRepo.findByToken(refeshToken);
 		rt.setBlocked(true);
 		refreshTokenRepo.save(rt);
-		servletResponse.addCookie(cookieManager.invalidate(new Cookie("at","")));
-		servletResponse.addCookie(cookieManager.invalidate(new Cookie("rt","")));
-		return new ResponseEntity<ResponseStructure<SimpleResponseStructure>>(
-				simpleStructure.setMessage("Logout Successful").setStatus(HttpStatus.GONE.value()), HttpStatus.GONE);
+		servletResponse.addCookie(cookieManager.invalidate(new Cookie("at", "")));
+		servletResponse.addCookie(cookieManager.invalidate(new Cookie("rt", "")));
+		simpleStructure.setMessage("Logout Successful");
+		simpleStructure.setStatus(HttpStatus.GONE.value());
+		return new ResponseEntity<SimpleResponseStructure>(simpleStructure, HttpStatus.GONE);
 	}
 
 	/*-------------------------------------------> User Logout <---------------------------------------------*/
@@ -344,39 +345,57 @@ public class AuthServiceImpl implements AuthService {
 
 	/*---------------------------------> Revoke All Device Access <--------------------------------*/
 	@Override
-	public ResponseEntity<ResponseStructure<SimpleResponseStructure>> revokeAllDeviceAccess(String accessToken,
-			String refreshToken) {
+	public ResponseEntity<SimpleResponseStructure> revokeAllDeviceAccess(String accessToken, String refreshToken) {
 		String username = SecurityContextHolder.getContext().getAuthentication().getName();
 		userRepo.findByUsername(username).ifPresent(user -> {
 			System.out.println("user");
-			accessTokenRepo.findByUserAndIsBlocked(user, false).ifPresent(access -> {
-				System.out.println("acc");
+			accessTokenRepo.findByUserAndIsBlocked(user, false).forEach(access -> {
 				access.setBlocked(true);
 				accessTokenRepo.save(access);
 			});
-			refreshTokenRepo.findByUserAndIsBlocked(user, false).ifPresent(refresh -> {
-				System.out.println("rcc");
+			refreshTokenRepo.findByUserAndIsBlocked(user, false).forEach(refresh -> {
 				refresh.setBlocked(true);
 				refreshTokenRepo.save(refresh);
 			});
 		});
-		return new ResponseEntity<ResponseStructure<SimpleResponseStructure>>(simpleStructure
-				.setStatus(HttpStatus.OK.value()).setMessage("All access revoked and logged out from all devices"),
-				HttpStatus.OK);
+		return new ResponseEntity<SimpleResponseStructure>(simpleStructure.setStatus(HttpStatus.OK.value())
+				.setMessage("All access revoked and logged out from all devices"), HttpStatus.OK);
 	}
 
 	/*---------------------------------> Revoke Other Device Access <--------------------------------*/
 	@Override
-	public ResponseEntity<ResponseStructure<SimpleResponseStructure>> revokeOtherDeviceAccess(String accessToken,
-			String refreshToken) {
+	public ResponseEntity<SimpleResponseStructure> revokeOtherDeviceAccess(String accessToken, String refreshToken) {
 		String username = SecurityContextHolder.getContext().getAuthentication().getName();
 		userRepo.findByUsername(username).ifPresent(user -> {
 			blockAccessTokens(accessTokenRepo.findByUserAndIsBlockedAndTokenNot(user, false, accessToken));
 			blockRefreshTokens(refreshTokenRepo.findByUserAndIsBlockedAndTokenNot(user, false, refreshToken));
 		});
-		return new ResponseEntity<ResponseStructure<SimpleResponseStructure>>(simpleStructure
+		return new ResponseEntity<SimpleResponseStructure>(simpleStructure
 				.setMessage("All other devices logged out successfully").setStatus(HttpStatus.OK.value()),
 				HttpStatus.OK);
+	}
+
+	/*---------------------------------> Revoke Other Device Access <--------------------------------*/
+
+	@Override
+	public ResponseEntity<SimpleResponseStructure> refreshLogin(HttpServletResponse servletResponse, String accessToken,
+			String refreshToken) {
+		String username = SecurityContextHolder.getContext().getAuthentication().getName();
+		userRepo.findByUsername(username).ifPresent(user -> {
+			if (accessToken == null) {
+				grantAccess(servletResponse, user);
+			} else
+				blockAccessTokens(accessTokenRepo.findByUserAndIsBlockedAndTokenNot(user, false, accessToken));
+			if (refreshToken == null)
+				throw new UserNotLoggedInException("User not logged-In", HttpStatus.BAD_REQUEST.value(), "");
+			else {
+				blockRefreshTokens(refreshTokenRepo.findByUserAndIsBlockedAndTokenNot(user, false, refreshToken));
+				grantAccess(servletResponse, user);
+			}
+		});
+
+		return new ResponseEntity<SimpleResponseStructure>(
+				simpleStructure.setMessage("Tokens Refreshed").setStatus(HttpStatus.OK.value()), HttpStatus.OK);
 	}
 
 }
