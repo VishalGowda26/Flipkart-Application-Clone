@@ -30,6 +30,7 @@ public class AuthExceptionHandler {
 		return structure(HttpStatus.valueOf(ex.getStatus()), ex.getMessage(), ex.getRootcause());
 
 	}
+	
 	@ExceptionHandler(StoreNotFoundException.class)
 	public ResponseEntity<Object> handleStoreNotFoundException(StoreNotFoundException ex) {
 		return structure(HttpStatus.valueOf(ex.getStatus()), ex.getMessage(), ex.getRootcause());

@@ -5,7 +5,8 @@ import org.springframework.http.ResponseEntity;
 
 import com.ex.flipkartclone.entity.Seller;
 import com.ex.flipkartclone.entity.Store;
-import com.ex.flipkartclone.exception.ConstraintViolationException;
+import com.ex.flipkartclone.exception.StoreNotFoundException;
+import com.ex.flipkartclone.exception.UserNotFoundException;
 import com.ex.flipkartclone.repo.SellerRepo;
 import com.ex.flipkartclone.repo.StoreRepo;
 import com.ex.flipkartclone.request_dto.StoreRequest;
@@ -41,7 +42,7 @@ public class StoreServiceImpl implements StoreService {
 			return new ResponseEntity<ResponseStructure<StoreResponse>>(structure.setMessage("Store created")
 					.setStatus(HttpStatus.CREATED.value()).setData(mapToStoreResponse(store)), HttpStatus.CREATED);
 		} else
-			throw new ConstraintViolationException("Store not found", HttpStatus.NOT_FOUND.value(),
+			throw new StoreNotFoundException("Store not found", HttpStatus.NOT_FOUND.value(),
 					"Please check the given ID");
 	}
 
@@ -49,25 +50,25 @@ public class StoreServiceImpl implements StoreService {
 	@Override
 	public ResponseEntity<ResponseStructure<StoreResponse>> fetchStore(int storeId) {
 		Store store = storeRepo.findById(storeId).orElseThrow(() -> {
-			throw new ConstraintViolationException("Store not found", HttpStatus.NOT_FOUND.value(),
+			throw new StoreNotFoundException("Store not found", HttpStatus.NOT_FOUND.value(),
 					"Please check the given ID");
 		});
 		return new ResponseEntity<ResponseStructure<StoreResponse>>(
-				structure.setMessage("Store details Fetched Successfully").setStatus(HttpStatus.CREATED.value())
+				structure.setMessage("Store details Fetched Successfully").setStatus(HttpStatus.FOUND.value())
 						.setData(mapToStoreResponse(store)),
-				HttpStatus.CREATED);
+				HttpStatus.FOUND);
 	}
 
 	/*------------------------------------------------------> Fetch Store By Seller <-----------------------------------------------------*/
 	@Override
 	public ResponseEntity<ResponseStructure<StoreResponse>> fetchStoreBySeller(int sellerId) {
 		Seller seller = sellerRepo.findById(sellerId).orElseThrow(() -> {
-			throw new ConstraintViolationException("User not found", HttpStatus.NO_CONTENT.value(), "");
+			throw new UserNotFoundException("User not found", HttpStatus.NO_CONTENT.value(), "");
 		});
 		structure.setStatus(HttpStatus.OK.value());
 		structure.setData(mapToStoreResponse(seller.getStore()));
 		structure.setMessage("Store successfully fetched");
-		return new ResponseEntity<>(structure, HttpStatus.OK);
+		return new ResponseEntity<ResponseStructure<StoreResponse>>(structure, HttpStatus.OK);
 	}
 
 	/*------------------------------------------------------> Update Store <-----------------------------------------------------*/
@@ -81,7 +82,7 @@ public class StoreServiceImpl implements StoreService {
 			structure.setData(mapToStoreResponse(store));
 			structure.setMessage("Store successfully fetched");
 		});
-		return new ResponseEntity<>(structure, HttpStatus.OK);
+		return new ResponseEntity<ResponseStructure<StoreResponse>>(structure, HttpStatus.OK);
 	}
 
 }

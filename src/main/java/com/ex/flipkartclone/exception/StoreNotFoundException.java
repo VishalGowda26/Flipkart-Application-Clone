@@ -8,7 +8,7 @@ import lombok.Setter;
 @AllArgsConstructor
 @Getter
 @Setter
-public class StoreNotFoundException extends Exception {
+public class StoreNotFoundException extends RuntimeException {
 	private String message;
 	private int status;
 	private String rootcause;
