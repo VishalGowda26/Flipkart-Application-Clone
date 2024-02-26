@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.ex.flipkartclone.exception.ConstraintViolationException;
+import com.ex.flipkartclone.exception.StoreNotFoundException;
 import com.ex.flipkartclone.exception.UserNotLoggedInException;
 
 @RestControllerAdvice
@@ -28,5 +29,10 @@ public class AuthExceptionHandler {
 	public ResponseEntity<Object> handleUserNotLoggedInException(UserNotLoggedInException ex) {
 		return structure(HttpStatus.valueOf(ex.getStatus()), ex.getMessage(), ex.getRootcause());
 
+	}
+	@ExceptionHandler(StoreNotFoundException.class)
+	public ResponseEntity<Object> handleStoreNotFoundException(StoreNotFoundException ex) {
+		return structure(HttpStatus.valueOf(ex.getStatus()), ex.getMessage(), ex.getRootcause());
+		
 	}
 }
