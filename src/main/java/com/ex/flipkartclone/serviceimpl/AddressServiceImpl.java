@@ -2,6 +2,7 @@ package com.ex.flipkartclone.serviceimpl;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
 
 import com.ex.flipkartclone.entity.Address;
 import com.ex.flipkartclone.entity.Store;
@@ -14,6 +15,7 @@ import com.ex.flipkartclone.response_dto.AddressResponse;
 import com.ex.flipkartclone.service.AddressService;
 import com.ex.flipkartclone.util.ResponseStructure;
 
+@Service
 public class AddressServiceImpl implements AddressService {
 	private AddressRepo addressRepo;
 	private StoreRepo storeRepo;

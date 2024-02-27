@@ -1,11 +1,14 @@
 package com.ex.flipkartclone.entity;
 
+import java.util.List;
+
 import com.ex.flipkartclone.enums.AddressType;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -29,5 +32,8 @@ public class Address {
 	private String city;
 	private int pincode;
 	private AddressType addressType;
+	
+	@OneToMany
+    private List<Contact> contacts;
 
 }
